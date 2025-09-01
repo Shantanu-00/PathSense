@@ -21,6 +21,9 @@ app.add_middleware(
 logger.info("🚀 Server started")
 
 # API routes
+@app.get("/")
+def root():
+    return {"status": "ok", "message": "PathSense API is running!"}
 
 app.include_router(places.router, prefix="/api/v1")
 app.include_router(optimize.router, prefix="/api/v1")
