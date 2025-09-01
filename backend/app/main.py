@@ -21,9 +21,8 @@ app.add_middleware(
 logger.info("🚀 Server started")
 
 # API routes
-app.include_router(intent.router, prefix="/api/v1")
+
 app.include_router(places.router, prefix="/api/v1")
-app.include_router(distance.router, prefix="/api/v1")
 app.include_router(optimize.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(geocode.router, prefix="/api/v1")
