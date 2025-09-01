@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { Place } from "@/lib/types"
 import { toast } from "sonner"
+import * as api from "@/utils/api"
 
 interface Props {
   sessionId: string | null
@@ -43,95 +44,47 @@ export default function OptionsDock({
   const isReturnToStartDisabled = !!end && start?.id !== end?.id
 
   async function addCustomPlace() {
-  if (!sessionId || !customName || !customAddress) return
+    if (!sessionId || !customName || !customAddress) return
 
-  try {
-    // Step 1: Geocode the address using your backend
-    const geoRes = await fetch(
-      `/api/v1/geocode?address=${encodeURIComponent(customAddress)}`
-    )
+    try {
+      // Step 1: Geocode the address using your backend
+      const geoData = await api.geocodeAddress(customAddress)
 
-    if (!geoRes.ok) {
-      const geoErr = await geoRes.text()
-      throw new Error(`Geocoding failed: ${geoErr}`)
-    }
-
-    const { latitude, longitude } = await geoRes.json()
-
-    // Step 2: Construct full place object
-    const newPlace = {
-      name: customName,
-      address: customAddress,
-      latitude,
-      longitude,
-    }
-
-    // Step 3: Send to backend to add place
-    const res = await fetch(
-      `/api/v1/add-place?session_id=${encodeURIComponent(sessionId)}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newPlace),
-      }
-    )
-
-    if (!res.ok) {
-      const raw = await res.text()
-      console.error("[Add Place Error Raw]", raw)
-
-      let message = "Failed to add place"
-      try {
-        const parsed = JSON.parse(raw)
-        message =
-          typeof parsed.detail === "string"
-            ? parsed.detail
-            : typeof parsed.detail === "object"
-            ? JSON.stringify(parsed.detail)
-            : message
-      } catch {
-        message = raw || message
+      // Step 2: Construct full place object
+      const newPlace = {
+        name: customName,
+        address: customAddress,
+        latitude: geoData.latitude,
+        longitude: geoData.longitude,
       }
 
-      toast.error(message)
-      throw new Error(message)
+      // Step 3: Send to backend to add place
+      const data = await api.addPlace(sessionId, newPlace)
+      toast.success("Place added")
+      onPlacesUpdate(data.places || [], data.start ?? null, data.end ?? null, false)
+      setCustomName("")
+      setCustomAddress("")
+    } catch (err: any) {
+      console.error("[Add Place Error]", err)
+      toast.error(err.message || "Failed to add place")
     }
-
-    const data = await res.json()
-    toast.success("Place added")
-    onPlacesUpdate(data.places || [], data.start ?? null, data.end ?? null, false)
-    setCustomName("")
-    setCustomAddress("")
-  } catch (err: any) {
-    console.error("[Add Place Error]", err)
-    toast.error(err.message || "Failed to add place")
   }
-}
 
   async function findMore() {
-  if (!sessionId || !findType || !findLocation || findCount < 1) return
+    if (!sessionId || !findType || !findLocation || findCount < 1) return
 
-  try {
-    const res = await fetch(
-      `/api/v1/find-places?session_id=${encodeURIComponent(sessionId)}&business_type=${encodeURIComponent(findType)}&location=${encodeURIComponent(findLocation)}&count=${findCount}`,
-      { method: "GET" }
-    )
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err.detail || "Failed to find places")
+    try {
+      const data = await api.findPlaces(sessionId, findType, findLocation, findCount)
+      toast.success("Places found")
+      
+      // Pass the data in the correct format
+      onPlacesUpdate(data.places || [], data.start ?? null, data.end ?? null, false)
+    } catch (err: any) {
+      console.error("[Find Places Error]", err)
+      toast.error(err.message || "Failed to find places")
     }
-
-    const data = await res.json()
-    toast.success("Places found")
-    
-    // Fix: Pass the data in the correct format
-    onPlacesUpdate(data.places || [], data.start ?? null, data.end ?? null, false)
-  } catch (err: any) {
-    console.error("[Find Places Error]", err)
-    toast.error(err.message || "Failed to find places")
   }
-}
+
   async function removePlace(id: string) {
     if (!sessionId || !id) return
 
@@ -140,34 +93,7 @@ export default function OptionsDock({
         await resetStartEnd(id === start?.id, id === end?.id)
       }
 
-      const res = await fetch(`/api/v1/remove-place?session_id=${encodeURIComponent(sessionId)}`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ place_id: id }),
-})
-
-      if (!res.ok) {
-  const raw = await res.text()
-  console.error("[Remove Place Error Raw]", raw)
-
-  let message = "Failed to remove place"
-  try {
-    const parsed = JSON.parse(raw)
-    message =
-      typeof parsed.detail === "string"
-        ? parsed.detail
-        : typeof parsed.detail === "object"
-        ? JSON.stringify(parsed.detail)
-        : message
-  } catch {
-    message = raw || message
-  }
-
-  toast.error(message)
-  throw new Error(message)
-}
-
-      const data = await res.json()
+      const data = await api.removePlace(sessionId, id)
       toast.success("Place removed")
       onPlacesUpdate(data.places || [], data.start ?? null, data.end ?? null, true)
     } catch (err: any) {
@@ -277,7 +203,7 @@ export default function OptionsDock({
           <h3 className="font-semibold mb-3 text-center">Optimization</h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-                            <Label className="flex-1">Algorithm:</Label>
+              <Label className="flex-1">Algorithm:</Label>
               <Select value={algo} onValueChange={(value: "nn" | "nn2opt" | "ga") => setAlgo(value)}>
                 <SelectTrigger className="w-32">
                   <SelectValue />

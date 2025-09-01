@@ -8,6 +8,7 @@ import { PlacesPanel } from "@/components/places-panel"
 import type { Place, OptimizeResult, PlacesData } from "@/lib/types"
 import OptionsDock from "@/components/options-dock"
 import OptimizationResult from "@/components/optimization-result"
+import * as api from "@/utils/api"
 
 const MapView = dynamic(() => import("@/components/map-view").then((mod) => mod.MapView), { ssr: false })
 
@@ -43,12 +44,12 @@ export default function HomeClient() {
   const appendPlacesData = (newPlaces: Place[], start?: Place | null, end?: Place | null) => {
     setPlacesData(prev => {
       const deduped = (newPlaces || []).filter(np => {
-  if (!np) return false
-  return !prev.places.some(p =>
-    p.latitude === np.latitude && p.longitude === np.longitude
-  )
-})
-console.log("[Deduped] New places to append:", deduped)
+        if (!np) return false
+        return !prev.places.some(p =>
+          p.latitude === np.latitude && p.longitude === np.longitude
+        )
+      })
+      console.log("[Deduped] New places to append:", deduped)
       const updated = {
         places: [...(prev.places || []), ...deduped],
         start: start ?? prev.start ?? null,
@@ -73,18 +74,18 @@ console.log("[Deduped] New places to append:", deduped)
   }
 
   const handlePlacesUpdateForOptionsDock = (
-  newPlaces: Place[],
-  start?: Place | null,
-  end?: Place | null,
-  replace?: boolean
-) => {
-  handlePlacesUpdate({
-    places: newPlaces,
-    start: start ?? null,
-    end: end ?? null,
-    replace: replace || false,
-  })
-}
+    newPlaces: Place[],
+    start?: Place | null,
+    end?: Place | null,
+    replace?: boolean
+  ) => {
+    handlePlacesUpdate({
+      places: newPlaces,
+      start: start ?? null,
+      end: end ?? null,
+      replace: replace || false,
+    })
+  }
 
   const handleIncomingPlaces = async (newPlaces: Place[], start?: Place, end?: Place) => {
     appendPlacesData(newPlaces || [], start ?? null, end ?? null)
@@ -100,21 +101,7 @@ console.log("[Deduped] New places to append:", deduped)
       const currentStart = placesData.start ?? null
       const currentEnd = placesData.end ?? null
 
-      const res = await fetch(
-        `/api/v1/confirm-places?session_id=${encodeURIComponent(sessionId)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ places: updatedPlaces, start: currentStart, end: currentEnd }),
-        }
-      )
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.detail || "Failed to update backend places")
-      }
-
-      const data = await res.json()
+      const data = await api.confirmPlaces(sessionId, updatedPlaces, currentStart, currentEnd)
       console.log("[Backend] Confirmed places:", data)
 
       replacePlacesData({
@@ -131,21 +118,7 @@ console.log("[Deduped] New places to append:", deduped)
     if (!sessionId) return
 
     try {
-      const res = await fetch(
-        `/api/v1/set-start-end?session_id=${encodeURIComponent(sessionId)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ start: start ?? null, end: end ?? null }),
-        }
-      )
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.detail || "Failed to set start/end points")
-      }
-
-      const data = await res.json()
+      const data = await api.setStartEnd(sessionId, start, end)
       console.log("[Backend] Set start/end:", data)
 
       setPlacesData(prev => ({
@@ -162,18 +135,7 @@ console.log("[Deduped] New places to append:", deduped)
     if (!sessionId) return
 
     try {
-      const res = await fetch(`/api/v1/reset-start-end?session_id=${encodeURIComponent(sessionId)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reset_start: resetStart, reset_end: resetEnd }),
-      })
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.detail || "Failed to reset start/end")
-      }
-
-      const data = await res.json()
+      const data = await api.resetStartEnd(sessionId, resetStart, resetEnd)
       console.log("[Backend] Reset start/end:", data)
 
       setPlacesData({
@@ -193,7 +155,7 @@ console.log("[Deduped] New places to append:", deduped)
     try {
       if (checked) {
         const newStart: Place | null = type === "start" ? place : placesData.start ?? null
-const newEnd: Place | null = type === "end" ? place : placesData.end ?? null
+        const newEnd: Place | null = type === "end" ? place : placesData.end ?? null
         await setStartEndPoints(newStart, newEnd)
       } else {
         await resetStartEnd(type === "start", type === "end")
@@ -203,21 +165,11 @@ const newEnd: Place | null = type === "end" ? place : placesData.end ?? null
     }
   }
 
-  async function onOptimize(algo: "nn" | "nn2opt" | "ga", returnToStart: boolean) {
+  const onOptimize = async (algo: "nn" | "nn2opt" | "ga", returnToStart: boolean) => {
     if (!sessionId || (placesData.places?.length ?? 0) < 2) return
 
     try {
-      const res = await fetch(
-        `/api/v1/route/optimize?session_id=${encodeURIComponent(sessionId)}&algo=${algo}&return_to_start=${returnToStart}`,
-        { method: "POST", headers: { "Content-Type": "application/json" } }
-      )
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.detail || "Optimization failed")
-      }
-
-      const data = await res.json()
+      const data = await api.optimizeRoute(sessionId, algo, returnToStart)
       console.log("[Optimization] Result:", data)
 
       setResult({
@@ -253,7 +205,8 @@ const newEnd: Place | null = type === "end" ? place : placesData.end ?? null
     ...(placesData.places || []),
     ...(placesData.end && placesData.end !== placesData.start ? [placesData.end] : []),
   ]
-    return (
+
+  return (
     <div className="h-full w-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <OptimizationResult result={result} onClose={() => setResult(null)} />
 
@@ -287,15 +240,15 @@ const newEnd: Place | null = type === "end" ? place : placesData.end ?? null
             <div className="grid min-h-0 grid-cols-2 gap-3">
               <div className="min-h-0">
                 <OptionsDock
-  sessionId={sessionId}
-  places={placesData.places || []}
-  start={placesData.start ?? null}
-  end={placesData.end ?? null}
-  onPlacesUpdate={handlePlacesUpdateForOptionsDock}
-  onOptimize={onOptimize}
-  onClearResult={handleClearResult}
-  resetStartEnd={resetStartEnd}
-/>
+                  sessionId={sessionId}
+                  places={placesData.places || []}
+                  start={placesData.start ?? null}
+                  end={placesData.end ?? null}
+                  onPlacesUpdate={handlePlacesUpdateForOptionsDock}
+                  onOptimize={onOptimize}
+                  onClearResult={handleClearResult}
+                  resetStartEnd={resetStartEnd}
+                />
               </div>
 
               <div className="min-h-0 relative rounded-lg border bg-white dark:bg-gray-800">

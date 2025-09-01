@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "sonner"
 import type { Place, PlacesData } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import * as api from "@/utils/api"
 
 type Message = { role: "user" | "bot"; content: string }
 
@@ -36,12 +37,7 @@ export function ChatPanel({
     setInput("")
     setLoading(true)
     try {
-      const res = await fetch("/api/v1/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: userMsg.content, session_id: sessionId }),
-      })
-      const data = await res.json()
+      const data = await api.sendChatMessage(userMsg.content, sessionId)
       if (data?.session_id) onSessionId(data.session_id)
       const botMsg: Message = { role: "bot", content: data?.message ?? "…" }
       setMessages((m) => [...m, botMsg])
@@ -67,7 +63,7 @@ export function ChatPanel({
   return (
     <Card className={cn("flex h-full min-h-0 flex-col bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100", className)}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">PathSense</CardTitle>
+        <CardTitle className="text-base">Assistant</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 min-h-0 overflow-hidden pb-2">
         <ScrollArea className="h-full pr-2">
