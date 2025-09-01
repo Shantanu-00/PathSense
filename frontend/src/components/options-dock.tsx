@@ -64,10 +64,15 @@ export default function OptionsDock({
       onPlacesUpdate(data.places || [], data.start ?? null, data.end ?? null, false)
       setCustomName("")
       setCustomAddress("")
-    } catch (err: any) {
-      console.error("[Add Place Error]", err)
-      toast.error(err.message || "Failed to add place")
-    }
+    } catch (err: unknown) {
+  console.error("[Add Place Error]", err)
+  if (err instanceof Error) {
+    toast.error(err.message || "Failed to add place")
+  } else {
+    toast.error("Failed to add place")
+  }
+}
+
   }
 
   async function findMore() {
@@ -79,10 +84,15 @@ export default function OptionsDock({
       
       // Pass the data in the correct format
       onPlacesUpdate(data.places || [], data.start ?? null, data.end ?? null, false)
-    } catch (err: any) {
-      console.error("[Find Places Error]", err)
-      toast.error(err.message || "Failed to find places")
-    }
+    } catch (err: unknown) {
+  console.error("[Update Place Error]", err)
+  if (err instanceof Error) {
+    toast.error(err.message || "Failed to update place")
+  } else {
+    toast.error("Failed to update place")
+  }
+}
+
   }
 
   async function removePlace(id: string) {
@@ -96,10 +106,15 @@ export default function OptionsDock({
       const data = await api.removePlace(sessionId, id)
       toast.success("Place removed")
       onPlacesUpdate(data.places || [], data.start ?? null, data.end ?? null, true)
-    } catch (err: any) {
-      console.error("[Remove Place Error]", err)
-      toast.error(err.message || "Failed to remove place")
-    }
+    } catch (err: unknown) {
+  console.error("[Remove Place Error]", err)
+  if (err instanceof Error) {
+    toast.error(err.message || "Failed to remove place")
+  } else {
+    toast.error("Failed to remove place")
+  }
+}
+
   }
 
   function optimize() {

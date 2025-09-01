@@ -18,13 +18,13 @@ interface PlacesPanelProps {
 }
 
 export function PlacesPanel({
-  sessionId,
+  //sessionId,
   places,
   start,
   end,
   setPlaces,
   onUpdate,
-  onSetStartEnd,
+  //onSetStartEnd,
   onTogglePoint,
 }: PlacesPanelProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
