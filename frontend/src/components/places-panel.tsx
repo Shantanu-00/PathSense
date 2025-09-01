@@ -54,8 +54,8 @@ export function PlacesPanel({
     setDragIndex(null)
   }
 
-  const isStart = (p: Place) => start?.id === p.id
-  const isEnd = (p: Place) => end?.id === p.id
+  const isStart = (p: Place):boolean => start?.id === p.id
+  const isEnd = (p: Place):boolean => end?.id === p.id
 useEffect(() => {
   console.log("[PlacesPanel] Rendering places:", places)
 }, [places])

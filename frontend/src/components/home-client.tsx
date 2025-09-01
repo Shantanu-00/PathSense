@@ -109,8 +109,9 @@ export default function HomeClient() {
         start: data.start ?? currentStart ?? null,
         end: data.end ?? currentEnd ?? null,
       })
-    } catch (err) {
-      console.error("[Backend Error] Failed to update places:", err)
+    } catch (err: unknown) {
+      if (err instanceof Error) console.error("[Backend Error] Failed to update places:", err.message)
+  else console.error("[Backend Error] Failed to update places:", err)
     }
   }
 
@@ -126,7 +127,7 @@ export default function HomeClient() {
         start: data.start ?? prev.start ?? null,
         end: data.end ?? prev.end ?? null,
       }))
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[Backend Error] Failed to set start/end:", err)
     }
   }
@@ -143,7 +144,7 @@ export default function HomeClient() {
         start: data.start ?? null,
         end: data.end ?? null,
       })
-    } catch (err) {
+    } catch (err:unknown) {
       console.error("[Backend Error] Failed to reset start/end:", err)
     }
   }
@@ -160,7 +161,7 @@ export default function HomeClient() {
       } else {
         await resetStartEnd(type === "start", type === "end")
       }
-    } catch (err) {
+    } catch (err:unknown) {
       console.error(`[Toggle Error] ${type}:`, err)
     }
   }
@@ -182,10 +183,11 @@ export default function HomeClient() {
         start: data.start ?? null,
         end: data.end ?? null,
       })
-    } catch (err: any) {
+    } catch (err:unknown ) {
       console.error("[Optimization Error]:", err)
-      alert(`Optimization failed: ${err?.message ?? "unknown error"}`)
-    }
+  if (err instanceof Error) alert(`Optimization failed: ${err.message}`)
+  else alert("Optimization failed: unknown error")
+}
   }
 
   const handleClearResult = () => {

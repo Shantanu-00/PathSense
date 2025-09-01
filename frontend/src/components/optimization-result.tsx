@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import type { OptimizeResult } from "@/lib/types"
+import type { OptimizeResult, Place } from "@/lib/types"
 
 export default function OptimizationResult({
   result,
@@ -102,7 +102,7 @@ export default function OptimizationResult({
           <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
             <h5 className="font-semibold mb-3 text-gray-900 dark:text-gray-100">Route Visualization</h5>
             <div className="space-y-2">
-              {uniqueSteps.map((step: any, index: number) => (
+              {uniqueSteps.map((step: Place, index: number) => (
                 <div key={index} className="flex items-center gap-3 p-2 bg-white dark:bg-gray-800 rounded">
                   <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-bold">
                     {index + 1}
@@ -153,7 +153,7 @@ export default function OptimizationResult({
           <div className="flex items-center justify-end gap-3">
             <button
               onClick={() => {
-                const text = uniqueSteps.map((s: any, i: number) => `${i + 1}. ${s.name ?? s.address ?? "Stop"}`).join("\n")
+                const text = uniqueSteps.map((s: Place, i: number) => `${i + 1}. ${s.name ?? s.address ?? "Stop"}`).join("\n")
                 navigator.clipboard?.writeText(text)
               }}
               className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"

@@ -7,7 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "sonner"
-import type { Place, PlacesData } from "@/lib/types"
+import type { Place } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import * as api from "@/utils/api"
 
@@ -46,9 +46,10 @@ export function ChatPanel({
         onIncomingPlaces(data.places, data.start, data.end)
         toast.success(`Added ${data.places.length} place(s) from chat.`)
       }
-    } catch (e: any) {
-      toast.error(e?.message || "Chat error: Something went wrong.")
-    } finally {
+    } catch (e: unknown) {
+  if (e instanceof Error) toast.error(e.message)
+  else toast.error("Chat error: Something went wrong.")
+}finally {
       setLoading(false)
     }
   }
