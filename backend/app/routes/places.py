@@ -195,27 +195,55 @@ async def remove_place(
     session_id: str | None = Query(None), 
     request: dict = Body(...)
 ):
+    """
+    Remove a place by ID from the session's route.
+    Clears start/end if the removed place was one of them.
+    Fully defensive and hardened.
+    """
     try:
+        if not session_id:
+            raise HTTPException(status_code=400, detail="Missing session_id")
+
+        place_id = request.get("place_id")
+        if not place_id:
+            raise HTTPException(status_code=400, detail="Missing place_id in request body")
+
+        # Get session safely
         session_id, state = get_session(session_id)
         route = state.setdefault('route', {"places": [], "start": None, "end": None, "last_query": {}})
         
-        place_id = request.get("place_id")
-        if not place_id:
-            raise HTTPException(status_code=400, detail="Missing place_id")
-            
-        # Get current places and remove the specified one
-        # Get current places and remove the specified one
-        current_places = route.get('places', [])
-        updated_places = [p for p in current_places if getattr(p, "id", None) != place_id]
+        current_places = route.get('places') or []
+
+        # Defensive filtering: only keep places with valid IDs not equal to place_id
+        updated_places = []
+        for p in current_places:
+            if p is None:
+                continue  # skip corrupted entries
+            try:
+                if getattr(p, "id", None) != place_id:
+                    updated_places.append(p)
+            except Exception as e:
+                logger.warning(f"[Session: {session_id}] Skipping invalid place object: {p} → {e}")
+
         route['places'] = updated_places
 
         # Clear start/end if the removed place was one of them
-        if route.get("start") and getattr(route["start"], "id", None) == place_id:
-            route["start"] = None
-        if route.get("end") and getattr(route["end"], "id", None) == place_id:
-            route["end"] = None
-        
-        store_in_session(session_id, state)
+        for point in ['start', 'end']:
+            place_obj = route.get(point)
+            if place_obj:
+                try:
+                    if getattr(place_obj, "id", None) == place_id:
+                        route[point] = None
+                except Exception as e:
+                    logger.warning(f"[Session: {session_id}] Failed to check {point} for removal: {e}")
+                    route[point] = None
+
+        # Store session defensively
+        try:
+            store_in_session(session_id, state)
+        except Exception as se:
+            logger.error(f"[Session: {session_id}] Failed to store session: {se}")
+
         logger.info(f"[Session: {session_id}] Removed place {place_id}. Remaining places: {len(updated_places)}")
 
         return PlacesResponse(
@@ -226,8 +254,11 @@ async def remove_place(
             start=route.get('start'),
             end=route.get('end')
         )
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Failed to remove place: {str(e)}")
+        logger.exception(f"Failed to remove place: {str(e)}")
         raise HTTPException(500, detail=f"Failed to remove place: {str(e)}")
 
 # -------------------------------
