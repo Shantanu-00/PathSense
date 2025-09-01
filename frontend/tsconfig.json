@@ -15,10 +15,11 @@
     "jsx": "preserve",
     "incremental": true,
     "baseUrl": "src",
+    "types": ["node"],
     "paths": {
       "@/*": ["*"]
     },
-    "types": ["node"],   // <-- Add this line
+      
     "plugins": [
       {
         "name": "next"
